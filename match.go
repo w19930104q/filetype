@@ -19,17 +19,15 @@ var NewMatcher = matchers.NewMatcher
 
 // Match infers the file type of a given buffer inspecting its magic numbers signature
 func Match(buf []byte) (types.Type, error) {
-	length := len(buf)
-	if length == 0 {
+	if len(buf) == 0 {
 		return types.Unknown, ErrEmptyBuffer
 	}
 
-	for _, kind := range *MatcherKeys {
-		checker := Matchers[kind]
-		match := checker(buf)
-		if match != types.Unknown && match.Extension != "" {
-			return match, nil
-		}
+	// Fast path: the pre-compiled matcher list preserves the exact
+	// MatcherKeys order and semantics, while avoiding a map lookup per
+	// kind and skipping matchers whose required leading byte cannot match.
+	if match := matchers.MatchRegistered(buf); match != types.Unknown && match.Extension != "" {
+		return match, nil
 	}
 
 	return types.Unknown, nil
