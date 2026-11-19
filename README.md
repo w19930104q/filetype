@@ -10,6 +10,7 @@ For SVG file type checking, see [go-is-svg](https://github.com/h2non/go-is-svg) 
 - Provides file extension and proper MIME type
 - File discovery by extension or MIME type
 - File discovery by class (image, video, audio...)
+- Codec-level identification of audio/video files (e.g. `h264` in `mp4`, `vp9` in `webm`)
 - Provides a bunch of helpers and file matching shortcuts
 - [Pluggable](#add-additional-file-type-matchers): add custom new types and matchers
 - Simple and semantic API
@@ -139,7 +140,48 @@ func main() {
 }
 ```
 
+#### Codec-level identification
+
+Audio and video files are typically just containers, so container-level
+matching cannot tell apart, say, an H.264 MP4 from an HEVC MP4.
+`MatchCodec` (and its `MatchCodecFile` / `MatchCodecReader` variants)
+inspects the container and reports the codec of the media streams in the
+`Codec` field of the returned type. The result is always consistent with
+`Match`: the extension and MIME type are identical, and when the codec
+cannot be determined the result falls back to the plain container-level
+type (empty `Codec`).
+
+```go
+package main
+
+import (
+  "fmt"
+
+  "github.com/h2non/filetype"
+)
+
+func main() {
+  buf, _ := os.ReadFile("movie.mp4")
+
+  kind, _ := filetype.MatchCodec(buf)
+  fmt.Println("Container:", kind.Extension) // "mp4"
+  fmt.Println("MIME:", kind.MIME.Value)     // "video/mp4"
+  fmt.Println("Codec:", kind.Codec)         // e.g. "h264"
+
+  if filetype.IsCodec(buf, "h264") {
+    fmt.Println("H.264 encoded file")
+  }
+}
+```
+
+Detected codec names include: `h264`, `hevc`, `vp8`, `vp9`, `av1`,
+`mpeg1`, `mpeg2`, `mpeg4`, `mjpeg`, `h263`, `theora`, `svq1`, `aac`,
+`mp3`, `mp2`, `opus`, `vorbis`, `flac`, `alac`, `pcm`, `ac3`, `eac3`,
+`dts`, `amr`, `wma`, `wmv1`, `wmv2`, `wmv3`, `vc1`, `speex`, `adpcm`,
+`alaw`, `mulaw` and `midi`.
+
 #### Add additional file type matchers
+
 
 ```go
 package main
